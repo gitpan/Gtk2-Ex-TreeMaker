@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use strict;
 use warnings;
@@ -48,22 +48,29 @@ The Gtk2::TreeView is an excellent widget to display a similar presentation of d
 
 This high level widget is designed with that purpose in mind. This module will accept a relational feed of records and automatically convert it into a hierarchical treeview using the Gtk2::TreeView. The process involves invoking some recursive functions to build a TreeModel and populate it. Also, since the spreadsheet itself can be rather long horizontally, the widget also has a I<FreezePane> capability.
 
+Details on the widget including a screenshot can be found at: http://ofey.blogspot.com/2005/02/gtk2extreemaker.html
+
 =head1 SYNOPSIS
 
    use Gtk2 -init;
    use Gtk2::Ex::TreeMaker;
 
-   # Initialize the treemaker
-   my $treemaker = Gtk2::Ex::TreeMaker->new();
-
-   # Create the column names. The first columnname has to be 'Name'
+   # Create an array to contain the column_names. These names appear as the header for each column.
+   # The first entry should be the title of the left side of the FreezePane.
    my $column_names = [
       'Name',
       'Nov-2003', 'Dec-2003', 'Jan-2004', 'Feb-2004'
    ];
 
    # This api will have to be cleaned soon...
-   # Define all the attributes of your records here.
+   # All the attributes of the cell in the treeview are specified here
+   # The value for these attributes are to be populated from the recordset
+   # The assumption is that the attributes are contained in the data record
+   # in the same order towards the **end** of the record. (the last few fields)
+   # Since we are using CellRendererText in the TreeView, any of the properties
+   # of the CellRendererText can be passed using this mechanism
+   # In addition to the properties of the CellRendererText, I have also added a
+   # custom property called 'hyperlinked'.
    my $data_attributes = [
       {'text' => 'Glib::String'},
       {'editable' => 'Glib::Boolean'},
@@ -79,11 +86,13 @@ This high level widget is designed with that purpose in mind. This module will a
       ['Texas','Austin','Veggies','Feb-2004','20',0,1,'green']
    ];
 
-   # Set the data_attributes and column_names first
-   $treemaker->set_meta_data($data_attributes, $column_names);
-   
-   # Now set the data_flat using the relational records
-   $treemaker->set_data_flat($recordset);
+   # Initialize our new widget
+   # The constructor requires two attributes
+   # This constitutes of the $column_name and the $data_attributes as described above
+   my $treemaker = Gtk2::Ex::TreeMaker->new($column_names, $data_attributes);
+
+   # We will inject our relational recordset into the new widget
+   $treemaker->set_data_flat(\@recordset);
    
    # Build the model
    $treemaker->build_model;
@@ -157,10 +166,10 @@ sub new {
 This sub is used to inject the relational recordset into the widget. This sub accepts a set of relational records (an array of arrays) as the argument. For example,
 
    my $recordset = [
-      ['Texas','Dallas','Fruits','Dec-2003','300'],
-      ['Texas','Dallas','Veggies','Jan-2004','120'],
-      ['Texas','Austin','Fruits','Nov-2003','310'],
-      ['Texas','Austin','Veggies','Feb-2004','20']
+      ['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
+      ['Texas','Dallas','Veggies','Jan-2004','120',1,0,'blue'],
+      ['Texas','Austin','Fruits','Nov-2003','310',1,1,'white'],
+      ['Texas','Austin','Veggies','Feb-2004','20',0,1,'green']
    ];
 
 =cut
@@ -181,13 +190,25 @@ sub set_data_tree_depth {
 
 =head2 Gtk2::Ex::TreeMaker->signal_connect($signal_name, $action)
 
-Currently, two signals are suppoted
+Currently, four signals are suppoted
 
 =over 4
 
 =item * cell-edited
 
+Thrown only for 'editable' cells.
+
 =item * cell-clicked
+
+Thrown only for 'hyperlinked' cells.
+
+=item * cell-enter
+
+Thrown only for 'hyperlinked' cells.
+
+=item * cell-leave
+
+Thrown only for 'hyperlinked' cells.
 
 =back
 
@@ -202,9 +223,9 @@ sub set_meta_data {
    my ($self, $col_names, $data_attributes) = @_;
    $self->{data_attributes} = $data_attributes;
    my $column_names = [];
-  	foreach my $col_name(@$col_names) {
-  		push @$column_names, { ColumnName => $col_name};
-  	}
+   foreach my $col_name(@$col_names) {
+      push @$column_names, { ColumnName => $col_name};
+   }
    # Add an emtpy column in the end for display purposes
    push @$column_names, { ColumnName => ''};
    $self->{column_names} = $column_names;
@@ -251,6 +272,8 @@ sub set_meta_data {
    $column->set_resizable(TRUE);
    $tree_view_frozen->append_column($column);   
 
+   my $treemaker_self = $self;
+
    # If the cell is hyperlinked, then change the mouse pointer to something else
    # This will give a visual feedback to the user that he should click on the cell
    $tree_view_full->signal_connect('motion-notify-event' =>
@@ -260,11 +283,23 @@ sub set_meta_data {
          my $cursor = undef;
          if ($path) {
             my $model = $self->get_model;
-            my $hyperlinked = $model->get ($model->get_iter ($path), $column->{hyperlinked});
+				my $hyperlinked = $model->get ($model->get_iter ($path), $column->{hyperlinked});
             if ($hyperlinked) {
-               $self->{cursor} = Gtk2::Gdk::Cursor->new ('hand2')
-                  unless $self->{cursor};
-               $cursor = $self->{cursor};
+					$self->{cursor} = Gtk2::Gdk::Cursor->new ('hand2')
+						unless $self->{cursor};
+					$cursor = $self->{cursor};
+
+					# We also need to throw the cell-enter event from here
+					# Note: Only hyperlinked cells should throught the cell-enter and leave events
+					&{$treemaker_self->{signals}->{'cell-enter'}}($treemaker_self, $path, $column->{column_number})
+						unless $self->{'cell-hovered'};
+					$self->{'cell-hovered'} = TRUE;					
+
+            } else {               
+               # Throw the cell-leave event here
+               &{$treemaker_self->{signals}->{'cell-leave'}}($treemaker_self, $path, $column->{column_number})
+						if $self->{'cell-hovered'};
+               $self->{'cell-hovered'} = FALSE;                        	
             }
          }
          $event->window->set_cursor ($cursor);
@@ -272,8 +307,6 @@ sub set_meta_data {
       }
    ); 
    
-
-   my $treemaker_self = $self;
    
    $tree_view_full->signal_connect('button-press-event' =>
       sub {        
@@ -352,31 +385,31 @@ sub _synchronize_trees {
 
    # First, we will synchronize the row-expansion/collapse
    $tree_view_frozen->signal_connect('row-expanded' =>
-            sub {
-               my ($view, $iter, $path) = @_;
-               $tree_view_full->expand_row($path,0);
-            }
-            ); 
+		sub {
+			my ($view, $iter, $path) = @_;
+			$tree_view_full->expand_row($path,0);
+		}
+	); 
    $tree_view_frozen->signal_connect('row-collapsed' =>
-            sub {
-               my ($view, $iter, $path) = @_;
-               $tree_view_full->collapse_row($path);
-            }
-            ); 
+		sub {
+			my ($view, $iter, $path) = @_;
+			$tree_view_full->collapse_row($path);
+		}
+	); 
 
    # Next, we will synchronize the row selection
    $tree_view_frozen->get_selection->signal_connect('changed' =>
-            sub {
-               my ($selection) = @_;
-               _synchronize_tree_selection($tree_view_frozen, $tree_view_full, $selection);
-            }
-            ); 
+		sub {
+			my ($selection) = @_;
+			_synchronize_tree_selection($tree_view_frozen, $tree_view_full, $selection);
+		}
+	); 
    $tree_view_full->get_selection->signal_connect('changed' =>
-            sub {
-               my ($selection) = @_;
-               _synchronize_tree_selection($tree_view_full, $tree_view_frozen, $selection);
-            }
-            ); 
+		sub {
+			my ($selection) = @_;
+			_synchronize_tree_selection($tree_view_full, $tree_view_frozen, $selection);
+		}
+	); 
 }
 
 
@@ -447,14 +480,14 @@ sub _create_columns {
       # Handle the edits. This is currently half baked.
       $cell->signal_connect (edited => 
          sub {
-               my ($cell, $pathstring, $newtext) = @_;
-               my $path = Gtk2::TreePath->new_from_string ($pathstring);
-               my $iter = $tree_store->get_iter ($path);               
-               $tree_store->set ($iter, $column_id, $newtext);
+				my ($cell, $pathstring, $newtext) = @_;
+				my $path = Gtk2::TreePath->new_from_string ($pathstring);
+				my $iter = $tree_store->get_iter ($path);               
+				$tree_store->set ($iter, $column_id, $newtext);
 
-               # Call the call-back hook specified
-               # Hey watch out for a division by zero !!! :) Come back later and fix it...
-               &{$self->{signals}->{'cell-edited'}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
+				# Call the call-back hook specified
+				# Hey watch out for a division by zero !!! :) Come back later and fix it...
+				&{$self->{signals}->{'cell-edited'}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
          });
 
       my @column_attr;
@@ -523,7 +556,6 @@ sub locate_record {
    # Next we just need to add the correct column_name
    push @$record, $column_name;
    foreach my $node (@{$temp->{'Node'}}) {
-
       if ($node->{'Name'} eq $column_name) {
          push @$record, $node;
       }
@@ -563,17 +595,9 @@ __END__
 
 Here is a list of stuff that I plan to add to this module.
 
-=over 4
+=over 3
 
-=item * Not all cells need to be editable (DONE ! Included in this version)
-
-Provide some kind of criteria to decide whether a cell should be editable or not.
-
-=item * Some cells may need to be "hyperlinked" (DONE ! Included in this version)
-
-Some of the cells may have to be made clickable (hyperlinks). When clicked, may be the cell can drop down a menu or lead you to another view. Provide a callback on click (or rightclick) on the cells.
-
-=item * Wake Up ! Add some tests.
+=item * Wake Up ! Add some more tests.
 
 =back
 

@@ -27,3 +27,8 @@ Revision history for Gtk2-Ex-TreeMaker
 	* (Still to add tests for the UI events, cell-edited, cell-clicked etc)
 	* Cleaned up the API for setting the column_names.
 
+0.07	Feb 11, 2005
+	* Added two more signals (cell-enter and cell-leave)
+	* These signals are applicable only for the 'hyperlinked' cells. Call-back will be called when the mouse enters or leaves a 'hyperlinked' cell.
+	* Updated the example to reflect the new capability
+	* Updated the documentation to reflect the new capability

@@ -56,9 +56,17 @@ $treemaker->build_model;
 # We will provide a hook (a call-back) sub to be called when a cell is being edited.
 # For fun, we will find out which record from the original recordset is being edited
 # and then we will keep pushing those records into an edited_records_cache
+# This event is thrown only for an 'editable' cell
 $treemaker->signal_connect ('cell-edited' => \&when_cell_edited);
 
+# This event is thrown only for a 'hyperlinked' cell
 $treemaker->signal_connect ('cell-clicked' => \&when_cell_clicked);
+
+# This event is thrown only for a 'hyperlinked' cell
+$treemaker->signal_connect ('cell-enter' => \&when_cell_enter);
+
+# This event is thrown only for a 'hyperlinked' cell
+$treemaker->signal_connect ('cell-leave' => \&when_cell_leave);
 
 # Get a reference to the widget of the treemaker
 my $treemaker_widget = $treemaker->get_widget();
@@ -84,7 +92,8 @@ $tooltips->set_tip ($show_button,
 
 # Add the treemaker_widget and the show_button to the root window. Make it look good !
 my $buttonbox = Gtk2::HBox->new(TRUE, 0);
-$buttonbox->pack_start(Gtk2::Label->new(), TRUE, TRUE, 0);
+my $status_label = Gtk2::Label->new();
+$buttonbox->pack_start($status_label, TRUE, TRUE, 0);
 $buttonbox->pack_start($show_button, TRUE, TRUE, 0);
 $buttonbox->pack_start(Gtk2::Label->new(), TRUE, TRUE, 0);
 my $vbox = Gtk2::VBox->new (FALSE, 0);
@@ -96,19 +105,21 @@ $window->show_all;
 Gtk2->main;
 
 # Here is the definition of the callback functions
+
+# This event is thrown only for an 'editable' cell
 sub when_cell_edited {
 	# The arguments received are:
 	#   The TreeMaker object itself
-	#   The Gtk2::TreePath to the CELL being edited
-	#   The column_id of the TreeViewColumn being edited
-	#   The newly entered text
+   #   The Gtk2::TreePath to the CELL being edited
+   #   The column_id of the TreeViewColumn being edited
+   #   The newly entered text
    my ($treemaker, $edit_path, $column_id, $newtext) = @_;
    my $edited_record = $treemaker->locate_record($edit_path, $column_id);
    my $cache = { RECORD => $edited_record, NEW_TEXT => $newtext };
    push @edited_records_cache, $cache;
 }
 
-# Here is the definition of the callback functions
+# This event is thrown only for a 'hyperlinked' cell
 sub when_cell_clicked {
 	# The arguments received are:
 	#   The TreeMaker object itself
@@ -119,7 +130,29 @@ sub when_cell_clicked {
    print Dumper $clicked_record;
 }
 
+# This event is thrown only for a 'hyperlinked' cell
+sub when_cell_enter {
+	# The arguments received are:
+	#   The TreeMaker object itself
+	#   The Gtk2::TreePath to the CELL that was clicked on
+	#   The column_id of the TreeViewColumn being edited
+   my ($treemaker, $path, $column_id) = @_;
+   my $clicked_record = $treemaker->locate_record($path, $column_id);
+   $status_label->set_label('Click me...');
+   print "Enter hyperlinked cell\n";
+}
 
+# This event is thrown only for a 'hyperlinked' cell
+sub when_cell_leave {
+	# The arguments received are:
+	#   The TreeMaker object itself
+	#   The Gtk2::TreePath to the CELL that was clicked on
+	#   The column_id of the TreeViewColumn being edited
+   my ($treemaker, $path, $column_id) = @_;
+   my $clicked_record = $treemaker->locate_record($path, $column_id);
+   $status_label->set_label('');
+   print "Leave hyperlinked cell\n";
+}
 __DATA__
 #state,city,product,date,text,editable,underline,background
 Texas,Dallas,Fruits,Dec-2003,300,0,1,white,0
