@@ -2,4 +2,17 @@ Revision history for Gtk2-Ex-TreeMaker
 
 0.01    Date/time
         First version, released on an unsuspecting world.
+        
+0.02 and 0.03
+	Lost in the sea of darkness and confusion. Awaiting new light !
+	
+0.04	Feb 1, 2005
+	Lets start getting serious here!
+	* First decent release
+	* Cleaned up META.yml
+	* Cleaned up MANIFEST
+	* Added attributes like editable, underline etc.
+
+	
+	
 

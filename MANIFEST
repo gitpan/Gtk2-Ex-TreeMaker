@@ -4,6 +4,7 @@ META.yml # Will be created by "make dist"
 Makefile.PL
 README
 lib/Gtk2/Ex/TreeMaker.pm
+lib/Gtk2/Ex/TreeMaker/FlatInterface.pm
 t/00.load.t
 t/pod-coverage.t
 t/pod.t

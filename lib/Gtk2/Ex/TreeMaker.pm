@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.01';
+our $VERSION = '0.04';
 
 use strict;
 use warnings;
@@ -11,7 +11,42 @@ use Gtk2::Ex::TreeMaker::FlatInterface;
 
 =head1 NAME
 
-B<Gtk2::Ex::TreeMaker> - A short intro
+B<Gtk2::Ex::TreeMaker> - A high level widget to represent a set of relational records in a hierarchical spreadsheet kinda display. This task is typical to most of the business application user interfaces.
+
+=head1 DESCRIPTION
+
+Typically in business applications, users like to view data in a spreadsheet kind of display. (Columns represent timeline(typically) and rows represent measures like sales/inventory/blah/blah).
+
+The data itself is typically stored internally as relational records. For example, here is some sales info (stored internally in a relational database)
+
+   -------------------------------------
+   Region, City, Product, Date, Quantity
+   -------------------------------------
+   Texas, Dallas, Fruits, Dec-2003, 300
+   Texas, Dallas, Veggies, Jan-2004, 120
+   Texas, Austin, Fruits, Nov-2003, 310
+   Texas, Austin, Veggies, Feb-2004, 20
+   -------------------------------------
+
+The user will typically want to view the same data in a hierarchical(/spreadsheet) kinda display.
+
+   ------------------------------------------------------
+   Prod / Date   Nov-2003  Dec-2003  Jan-2004  Feb-2004 
+   ------------------------------------------------------
+   Texas
+      Dallas
+        Fruits                  300             
+        Veggies                           120 
+      Austin
+        Fruits        310
+        Veggies                                     20
+   ------------------------------------------------------
+
+With web-based business apps, similar views are created in the browser using lots of html/jsp coding.
+
+The Gtk2::TreeView is an excellent widget to display a similar presentation of data in a desktop app. But creating a (hierarchical) TreeView from flat relational data can require some recursive function coding. It would be great if all this recursive code could be abstracted out and packaged separately.
+
+This high level widget is designed with that purpose in mind. This module will accept a relational feed of records and automatically convert it into a hierarchical treeview using the Gtk2::TreeView. The process involves invoking some recursive functions to build a TreeModel and populate it. Also, since the spreadsheet itself can be rather long horizontally, the widget also has a I<FreezePane> capability.
 
 =head1 SYNOPSIS
 
@@ -28,23 +63,31 @@ B<Gtk2::Ex::TreeMaker> - A short intro
       { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
    ];
 
+	# This api will have to be cleaned soon...
+	# Define all the attributes of your records here.
+	my $data_attributes = [
+		{'text' => 'Glib::String'},
+		{'editable' => 'Glib::Boolean'},
+		{'underline' => 'Glib::Boolean'}, 
+		{'background' => 'Glib::String'}, 
+	];
+	
    # Here is the set of relational records to be displayed
    my $recordset = [
-      ['Texas','Dallas','Fruits','Dec-2003','300'],
-      ['Texas','Dallas','Veggies','Jan-2004','120'],
-      ['Texas','Austin','Fruits','Nov-2003','310'],
-      ['Texas','Austin','Veggies','Feb-2004','20']
+      ['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
+      ['Texas','Dallas','Veggies','Jan-2004','120',1,0,'blue'],
+      ['Texas','Austin','Fruits','Nov-2003','310',1,1,'white'],
+      ['Texas','Austin','Veggies','Feb-2004','20',0,1,'green']
    ];
 
-   # Set the column_names first
-   $treemaker->set_column_names($column_names);
+   # Set the data_attributes and column_names first
+   $treemaker->set_column_names($data_attributes, $column_names);
    
    # Now set the data_flat using the relational records
    $treemaker->set_data_flat($recordset);
    
 
    # Build the model
-
    $treemaker->build_model;
 
    # Create a root window to display the widget
@@ -58,19 +101,11 @@ B<Gtk2::Ex::TreeMaker> - A short intro
    $window->show_all;
    Gtk2->main;
 
-=head1 DESCRIPTION
-
-Write the story here
-
-=head1 USER INTERACTION
-
-May be some more details
-
 =head1 METHODS
 
 =head2 Gtk2::Ex::TreeMaker->new
 
-Accepts no arguments. Just returns a reference to the object
+This is the constructor. Accepts no arguments. Just returns a reference to the object
 
 =cut
 
@@ -78,6 +113,7 @@ sub new {
    my ($class) = @_;
    my $self  = {};
    $self->{data_tree} = undef;
+   $self->{data_attributes} = undef;
    $self->{edited_data_flat} = [];
    $self->{data_tree_depth} = undef;
    $self->{column_names} = undef;
@@ -87,13 +123,14 @@ sub new {
    $self->{tree_view_full} = undef;
    $self->{tree_view_frozen} = undef;
    $self->{chosen_column} = undef;
+   $self->{cell_edited} = undef;
    bless ($self, $class);
    return $self;
 }
 
 =head2 Gtk2::Ex::TreeMaker->set_data_flat
 
-Accepts and array of arrays as the argument. For example,
+This sub accepts a set of relational records (an array of arrays) as the argument. For example,
 
    my $recordset = [
       ['Texas','Dallas','Fruits','Dec-2003','300'],
@@ -107,8 +144,8 @@ Accepts and array of arrays as the argument. For example,
 sub set_data_flat {
    my ($self, $data_flat) = @_;
    my $flat_interface = Gtk2::Ex::TreeMaker::FlatInterface->new();
-   my $data_tree = $flat_interface->flat_to_tree($data_flat);
-   $self->_set_data_tree($data_tree);  
+   my $data_tree = $flat_interface->flat_to_tree($self->{data_attributes}, $data_flat);
+   $self->_set_data_tree($data_tree); 
 }
 
 # This method is temporarily not required. Will come back to it later
@@ -124,9 +161,25 @@ sub _set_data_tree {
    $self->{data_tree} = $data_tree;
 }
 
+sub set_cell_edited {
+   my ($self, $cell_edited) = @_;
+   $self->{cell_edited} = $cell_edited;
+}
+
 =head2 Gtk2::Ex::TreeMaker->set_column_names
 
-The argument is an array. Each element of the array is a hash. The hash uses 'ColumnName' as the key. For example,
+There are two arguments.
+
+First argument is the data_attributes. Here you specify what attributes each record has. For example,
+
+	my $data_attributes = [
+		{'text' => 'Glib::String'},
+		{'editable' => 'Glib::Boolean'},
+		{'underline' => 'Glib::Boolean'}, 
+		{'background' => 'Glib::String'}, 
+	];
+
+Second argument is an array. Each element of the array is a hash. The hash uses 'ColumnName' as the key. For example,
 
    my $column_names = [
       { ColumnName => 'Name' },
@@ -137,13 +190,24 @@ The argument is an array. Each element of the array is a hash. The hash uses 'Co
 =cut
 
 sub set_column_names {
-   my ($self, $column_names) = @_;
+   my ($self, $data_attributes, $column_names) = @_;
+   $self->{data_attributes} = $data_attributes;
    # Add an emtpy column in the end for display purposes
    push @$column_names, { ColumnName => ''};
    $self->{column_names} = $column_names;
    $self->{frozen_column} = [$column_names->[0]];
-   my @tree_store_full_types = map {'Glib::String'} @{$self->{column_names}};
-   my @tree_store_frozen_types = map {'Glib::String'} @{$self->{frozen_column}};
+   my @temp;
+   my @column_attr;
+   my $count=0;
+   foreach my $attr (@$data_attributes) {
+   	foreach my $key (keys %$attr) {
+   		push @temp, $attr->{$key};
+   		push @column_attr, $key;
+   		push @column_attr, $count++;
+   	}
+   }   
+   my @tree_store_full_types = map {@temp} @{$self->{column_names}};
+   my @tree_store_frozen_types = map {@temp} @{$self->{frozen_column}};
    my $tree_store_full = Gtk2::TreeStore->new(@tree_store_full_types);
    my $tree_store_frozen = Gtk2::TreeStore->new(@tree_store_frozen_types);
    $self->{tree_store_full} = $tree_store_full;
@@ -151,17 +215,18 @@ sub set_column_names {
    my $tree_view_full = Gtk2::TreeView->new($tree_store_full);
    my $tree_view_frozen = Gtk2::TreeView->new($tree_store_frozen);
    
-   #$tree_view_full->set_rules_hint(TRUE);
-   #$tree_view_frozen->set_rules_hint(TRUE);
+   $tree_view_full->set_rules_hint(TRUE);
+   $tree_view_frozen->set_rules_hint(TRUE);
    
    _synchronize_trees($tree_view_frozen, $tree_view_full);
    $self->{tree_view_full} = $tree_view_full;
    $self->{tree_view_frozen} = $tree_view_frozen;
+      
    $self->_create_columns ($self->{column_names}, $tree_store_full, $tree_view_full);
    # There is only one column (the first column) in this case
-   my $column_name =  $self->{frozen_column}->[0]->{ColumnName};
+   my $column_name =  $self->{frozen_column}->[0]->{ColumnName};	
    my $column = Gtk2::TreeViewColumn->new_with_attributes(
-                     $column_name, Gtk2::CellRendererText->new(), text => 0);
+                     $column_name, Gtk2::CellRendererText->new(), @column_attr);
    $column->set_resizable(TRUE);
    $tree_view_frozen->append_column($column);   
 }
@@ -176,17 +241,17 @@ sub clear_model {
 
 This is the core recursive method that actually builds the tree. 
 
-Accepts no arguments. Returns nothing.
-
 =cut
 
 sub build_model {
    my ($self) = @_;
    $self->clear_model;
-   _append_children($self->{tree_view_full}->get_model(), undef, 
-                                    $self->{data_tree}, $self->{column_names});  
-   _append_children($self->{tree_view_frozen}->get_model(), undef, 
-                                    $self->{data_tree}, $self->{frozen_column}); 
+   foreach my $subtree (@{$self->{data_tree}->{'Node'}}) {
+      $self->_append_children($self->{tree_view_full}->get_model(), undef, 
+                                       $subtree, $self->{column_names});  
+      $self->_append_children($self->{tree_view_frozen}->get_model(), undef, 
+                                       $subtree, $self->{frozen_column});
+   }
    # Expand the tree to start with
    $self->{tree_view_frozen}->expand_all;
 }
@@ -262,20 +327,41 @@ sub _synchronize_tree_selection {
 }
 
 sub _append_children {
-   my ($tree_store, $iter, $data_tree, $columns) = @_;
-   if ($data_tree) {    
-      my $count = 0;    
-      my $child_iter = $tree_store->append ($iter);
-      for my $column(@$columns) {
-         my $column_name = $column->{ColumnName};
-         if ($data_tree->{$column_name}) {
-            $tree_store->set($child_iter, $count, $data_tree->{$column_name});
-         }
-         $count++;
-      }
-      foreach my $child(@{$data_tree->{'Node'}}) {
-         _append_children($tree_store, $child_iter, $child, $columns);
-      }
+   my ($self, $tree_store, $iter, $data_tree, $columns) = @_;
+   if ($data_tree ) {   
+   	my $count = 0;  
+   	if ($data_tree->{'Node'}) {
+			my $child_iter = $tree_store->append ($iter);
+			for my $column(@$columns) {
+				my $column_name = $column->{ColumnName};
+
+				# Ignore the real name of the first column. Use the special value called 'Name'
+				# so that the tree traversal is correct.
+				$column_name = 'Name' if ($count == 0);
+
+				if ($data_tree->{$column_name}) {
+					$tree_store->set($child_iter, $count, $data_tree->{$column_name});
+				}
+				$count+=$#{@{$self->{data_attributes}}}+1;
+			}
+			foreach my $child(@{$data_tree->{'Node'}}) {
+				$self->_append_children($tree_store, $child_iter, $child, $columns);
+			}
+		} else {
+			for my $column(@$columns) {
+				my $column_name = $column->{ColumnName};
+				next unless ($column_name);
+				if ($data_tree->{'Name'} eq $column_name) {
+					foreach my $attr (@{$self->{data_attributes}}) {
+						foreach my $key (keys %$attr) {
+							$tree_store->set($iter, $count++, $data_tree->{$key});
+						}
+					}
+				}
+				$count+=$#{@{$self->{data_attributes}}}+1;
+			}		
+		}
+		
    }
 }
 
@@ -288,11 +374,7 @@ sub _create_columns {
       
       # Align all cells to the right
       $cell->set (xalign => 1);
-      
-      # Make all cells editable. We will probably add some logic here later on.
-      $cell->set (editable => TRUE);      
-      #$cell->set (editable => TRUE) if $column_count % 3; # Some stupid logic.
-      
+            
       # Create a new variable.
       # Else it will always be set to max value of column_count
       # Reference issues
@@ -303,21 +385,28 @@ sub _create_columns {
          sub {
                my ($cell, $pathstring, $newtext) = @_;
                my $path = Gtk2::TreePath->new_from_string ($pathstring);
-               my $iter = $tree_store->get_iter ($path);
+               my $iter = $tree_store->get_iter ($path);               
                $tree_store->set ($iter, $column_id, $newtext);
-               
-               # Do something if data changes
-               #$self->_record_changes($path,$column_id, $newtext);
-               
-               # This needs to be worked on
-               #modify_xml ($path,$column_being_edited, $newtext);
+
+               # Call the call-back hook specified
+               # Hey watch out for a division by zero !!! :) Come back later and fix it...
+               &{$self->{cell_edited}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
+
          });
+
+   	my @column_attr;
+		my $count=0;
+		foreach my $attr (@{$self->{data_attributes}}) {
+			foreach my $key (keys %$attr) {
+				push @column_attr, $key;
+				push @column_attr, $column_count + $count++;
+			}
+		}   
       
-      my $column = Gtk2::TreeViewColumn->new_with_attributes(
-         $column_name, $cell, text => $column_count);
+		my $column = Gtk2::TreeViewColumn->new_with_attributes(
+			$column_name, $cell, text => $column_count, @column_attr);
       $column->set_resizable(TRUE);
       $tree_view->append_column($column);
-
 
       # Hide the first column
       # Ensure that the expander is fixed to the first column 
@@ -326,8 +415,43 @@ sub _create_columns {
          $column->set_visible(FALSE);
          $tree_view->set_expander_column($column);
       }
-      $column_count++;
+      $column_count+=$#{@{$self->{data_attributes}}}+1;
    }
+}
+
+=head2 Gtk2::Ex::TreeMaker->locate_record(Gtk2::TreePath, Integer, Text)
+
+This sub maps a TreeCell location into a flat record in the original recordset that was used to create this tree. The location of the TreeCell itself is denoted using two arguments, the Gtk2::TreePath that points to the row and the Column_ID that points to the column.
+
+Using this information, the function then traverses the internal data structure and returns a record (an array object).
+
+=cut
+
+sub locate_record {
+   my ($self, $edit_path, $column_id, $newtext) = @_; 
+   my $record;
+   
+   # Drill down the $tree_path and keep adding entries into the record
+   my $temp = $self->{data_tree};
+   my @tree_path = split /:/, $edit_path->to_string; 
+   for (my $i=0; $i<=$#tree_path; $i++) {
+      my $index = $tree_path[$i];
+      $temp = $temp->{'Node'}->[$index];
+      push @$record, $temp->{'Name'};
+   }
+   my $column_name = $self->{column_names}->[$column_id]->{'ColumnName'};
+   my $oldtext = $temp->{'Node'}->[0]->{'text'};
+   
+   # Now the hierarchical tree elements have been added into the record
+   # Next we just need to add the correct column_name
+   push @$record, $column_name;
+
+   # Now report the value_change into the $record
+   my $value = { 'NEW_VALUE' => $newtext, 'OLD_VALUE' => $oldtext };
+   
+   push @$record, $value;
+   
+   return $record;
 }
 
 # This method is temporarily out of service.
@@ -361,10 +485,6 @@ __END__
 Here is a list of stuff that I plan to add to this module.
 
 =over 4
-
-=item * Do something when cells are edited
-
-Probably, provide a callback hook for a sub that can be called when cells are edited. This sub can be responsible for caching all the changes and then applying it back to source data when a "SAVE" button is pressed, for example. 
 
 =item * Not all cells need to be editable
 

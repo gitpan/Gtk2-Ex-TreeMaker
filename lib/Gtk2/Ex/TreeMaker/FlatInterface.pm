@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker::FlatInterface;
 
-our $VERSION = '0.01';
+our $VERSION = '0.04';
 
 use strict;
 use warnings;
@@ -82,19 +82,27 @@ This data structure is really the key input into the Gtk2::Ex::TreeMaker module.
 =cut
 
 sub flat_to_tree {
-   my ($self, $flat) = @_;
-   my $intermediate = _flat_to_intermediate($flat);
-   my $tree = _intermediate_to_tree($intermediate);
+   my ($self, $data_attributes, $flat) = @_;
+   my @attributes;
+   foreach my $attr (@$data_attributes) {
+   	foreach my $key (keys %$attr) {
+   		push @attributes, $key;
+   	}
+   }   
+   my $intermediate = _flat_to_intermediate(\@attributes, $flat);
+   my $withroot = {};
+   $withroot->{'ROOT'} = $intermediate;
+   my $tree = _intermediate_to_tree($withroot);
    return $tree;
 }
 
 # This is a private method
 sub _flat_to_intermediate {
-   my ($flat) = shift;
+   my ($attributes, $flat) = @_;
    my $intermediate = {};  
    foreach my $record (@$flat) {
       my $sub_intermediate = $intermediate;
-      foreach (my $i=0; $i<=$#{@$record}-2; $i++){
+      foreach (my $i=0; $i<$#{@$record}-$#{@$attributes}; $i++){
          my $column = $record->[$i];
          next unless $column;
          if (!exists $sub_intermediate->{$column}) {
@@ -102,8 +110,8 @@ sub _flat_to_intermediate {
          }
          $sub_intermediate = $sub_intermediate->{$column};        
       }
-      if ($record->[-2]) {
-         $sub_intermediate->{$record->[-2]} = $record->[-1];      
+      foreach (my $i=$#{@$record}-$#{@$attributes}; $i<=$#{@$record}; $i++){
+      	$sub_intermediate->{$attributes->[$i-$#{@$record}+$#{@$attributes}]} = $record->[$i]; 
       }
    }
    return $intermediate;
