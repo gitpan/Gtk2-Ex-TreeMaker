@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use Gtk2::TestHelper tests => 41;
+use Gtk2::TestHelper tests => 43;
 
 use Gtk2::Ex::TreeMaker;
 use Data::Dumper;
@@ -9,9 +9,9 @@ use Data::Dumper;
 # The first entry should be the title of the left side of the FreezePane.
 my $column_names = [ 
 	'Region',
-   'Nov-2003', 'Dec-2003', 'Jan-2004', 
-   'Feb-2004', 'Mar-2004', 'Apr-2004',
-   'May-2004', 'Jun-2004', 'Jul-2004' 
+	'Nov-2003', 'Dec-2003', 'Jan-2004', 
+	'Feb-2004', 'Mar-2004', 'Apr-2004',
+	'May-2004', 'Jun-2004', 'Jul-2004' 
 ];
 
 # All the attributes of the cell in the treeview are specified here
@@ -23,20 +23,20 @@ my $column_names = [
 # In addition to the properties of the CellRendererText, I have also added a
 # custom property called 'hyperlinked'.
 my $data_attributes = [
-   {'text' => 'Glib::String'},
-   {'editable' => 'Glib::Boolean'},
-   {'hyperlinked' => 'Glib::Boolean'}, 
-   {'background' => 'Glib::String'},
-   {'strikethrough' => 'Glib::Boolean'},  
+	{'text' => 'Glib::String'},
+	{'editable' => 'Glib::Boolean'},
+	{'hyperlinked' => 'Glib::Boolean'}, 
+	{'background' => 'Glib::String'},
+	{'strikethrough' => 'Glib::Boolean'},  
 ];
 
 # Create a recordset as an array of arrays
 my @recordset;
 while(<DATA>) {
-   next if /^#/;
-   chomp;
-   my @record = split /\,/, $_;
-   push @recordset, \@record;
+	next if /^#/;
+	chomp;
+	my @record = split /\,/, $_;
+	push @recordset, \@record;
 }
 
 # Initialize our new widget
@@ -70,9 +70,9 @@ $window->signal_connect(destroy => sub { Gtk2->main_quit; });
 my $show_button = Gtk2::Button->new('Show Edit Cache');
 my @edited_records_cache;
 $show_button->signal_connect (clicked => 
-   sub {
-      print Dumper \@edited_records_cache;
-   }
+	sub {
+		print Dumper \@edited_records_cache;
+	}
 );
 
 # Add the treemaker_widget and the show_button to the root window. Make it look good !
@@ -88,28 +88,37 @@ $window->set_default_size(500, 300);
 $window->show_all;
 
 
+my $CELL = undef;
+
 # Here is the definition of the callback functions
 sub when_cell_edited {
-   # The arguments received are:
-   #   The TreeMaker object itself
-   #   The Gtk2::TreePath to the CELL being edited
-   #   The column_id of the TreeViewColumn being edited
-   #   The newly entered text
-   my ($treemaker, $edit_path, $column_id, $newtext) = @_;
-   is($edit_path->to_string(), "0:1:0");
-   is($column_id, 3);
-   is($newtext, 120);
+	# The arguments received are:
+	#	The TreeMaker object itself
+	#	The Gtk2::TreePath to the CELL being edited
+	#	The column_id of the TreeViewColumn being edited
+	#	The newly entered text
+	my ($treemaker, $edit_path, $column_id, $newtext) = @_;
+	# Since we will compare multiple cells, write a simple function for the comparison
+	my $x = $edit_path->to_string();
+	my $y = $column_id;
+	my $z = $newtext;
+	my $cell = [ $x, $y, $z ];
+	is(Dumper($cell), Dumper ($CELL));
+	
+	#is($edit_path->to_string(), "0:1:0");
+	#is($column_id, 3);
+	#is($newtext, 120);
 }
 
 # Here is the definition of the callback functions
 sub when_cell_clicked {
-   # The arguments received are:
-   #   The TreeMaker object itself
-   #   The Gtk2::TreePath to the CELL that was clicked on
-   #   The column_id of the TreeViewColumn being edited
-   my ($treemaker, $clicked_path, $column_id) = @_;
-   my $clicked_record = $treemaker->locate_record($clicked_path, $column_id);
-   print Dumper $clicked_record;
+	# The arguments received are:
+	#	The TreeMaker object itself
+	#	The Gtk2::TreePath to the CELL that was clicked on
+	#	The column_id of the TreeViewColumn being edited
+	my ($treemaker, $clicked_path, $column_id) = @_;
+	my $clicked_record = $treemaker->locate_record($clicked_path, $column_id);
+	print Dumper $clicked_record;
 }
 
 # ------------------------------------------------------------------ #
@@ -117,75 +126,77 @@ sub when_cell_clicked {
 # ------------------------------------------------------------------ #
 my $model = $treemaker->{tree_view_full}->get_model;
 my $values1 = [
-   ["0", 0, 'Texas'],
-   ["0:0", 0, 'Austin'],
-   ["0:0:0", 0, 'Veggies'],
-   ["0:0:1", 0, 'Fruits'],
-   ["0:1", 0, 'Dallas'],
-   ["0:1:0", 0, 'Veggies'],
-   ["0:1:1", 0, 'Fruits'],
-   ["1", 0, 'California'],
-   ["1:0", 0, 'LA'],
+	["0", 0, 'Texas'],
+	["0:0", 0, 'Austin'],
+	["0:0:0", 0, 'Veggies'],
+	["0:0:1", 0, 'Fruits'],
+	["0:1", 0, 'Dallas'],
+	["0:1:0", 0, 'Veggies'],
+	["0:1:1", 0, 'Fruits'],
+	["1", 0, 'California'],
+	["1:0", 0, 'LA'],
 
-   ["1:0:0", 0, 'Veggies'],
-   ["1:0:0", 1, 0],
-   ["1:0:0", 2, 0],
-   ["1:0:0", 3, undef],
-   ["1:0:0", 4, 0],
+	["1:0:0", 0, 'Veggies'],
+	["1:0:0", 1, 0],
+	["1:0:0", 2, 0],
+	["1:0:0", 3, undef],
+	["1:0:0", 4, 0],
 
-   # Test something from the tree_view_full side
-   # First we'll test a blank cell
-   ["1:0:0", 5, undef],
-   ["1:0:0", 6, 0],
-   ["1:0:0", 7, 0],
-   ["1:0:0", 8, undef],
-   ["1:0:0", 9, 0],
-   
-   # Now test a non-blank cell
-   ["1:0:0", 40, '80'],
-   ["1:0:0", 41, 1],
-   ["1:0:0", 42, 0],
-   ["1:0:0", 43, 'yellow'],
-   ["1:0:0", 44, 0],
+	# Test something from the tree_view_full side
+	# First we'll test a blank cell
+	["1:0:0", 5, undef],
+	["1:0:0", 6, 0],
+	["1:0:0", 7, 0],
+	["1:0:0", 8, undef],
+	["1:0:0", 9, 0],
+	
+	# Now test a non-blank cell
+	["1:0:0", 40, '80'],
+	["1:0:0", 41, 1],
+	["1:0:0", 42, 0],
+	["1:0:0", 43, 'yellow'],
+	["1:0:0", 44, 0],
 
-   # Test another non-blank cell
-   ["0:1:1", 10, '300'],
-   ["0:1:1", 11, 0],
-   ["0:1:1", 12, 1],
-   ["0:1:1", 13, 'white'],
-   ["0:1:1", 14, 0],
-   
-   # And another non-blank cell
-   ["0:0:1", 5, '310'],
-   ["0:0:1", 6, 1],
-   ["0:0:1", 7, 0],
-   ["0:0:1", 8, 'red'],
-   ["0:0:1", 9, 1],
-   
+	# Test another non-blank cell
+	["0:1:1", 10, '300'],
+	["0:1:1", 11, 0],
+	["0:1:1", 12, 1],
+	["0:1:1", 13, 'white'],
+	["0:1:1", 14, 0],
+	
+	# And another non-blank cell
+	["0:0:1", 5, '310'],
+	["0:0:1", 6, 1],
+	["0:0:1", 7, 0],
+	["0:0:1", 8, 'red'],
+	["0:0:1", 9, 1],
 ];
+
 foreach my $value (@$values1) {
-   my $path = $value->[0];
-   my $column = $value->[1];
-   my $string = $value->[2];
-   is($model->get($model->get_iter_from_string($path), $column), $string);
+	my $path = $value->[0];
+	my $column = $value->[1];
+	my $string = $value->[2];
+	is($model->get($model->get_iter_from_string($path), $column), $string);
 }
 
 # ------------------------------------------------------------------ #
 # Let us test the locate_record function using the same approach as above
 # ------------------------------------------------------------------ #
+$Data::Dumper::Sortkeys = 1;
+
 my $x = [
-          'Texas',
-          'Dallas',
-          'Fruits',
-          'Dec-2003',
-          {
-            'strikethrough' => '0',
-            'text' => '300',
-            'background' => 'white',
-            'editable' => '0',
-            'hyperlinked' => '1',
-            'Name' => 'Dec-2003'
-          }
+	'Texas',
+	'Dallas',
+	'Fruits',
+	'Dec-2003',
+	{
+		'Name' => 'Dec-2003',
+		'text' => '300',
+		'strikethrough' => '0',
+		'background' => 'white',
+		'editable' => '0',
+		'hyperlinked' => '1',
+	}
 ];
 
 my $y = $treemaker->locate_record(Gtk2::TreePath->new_from_string("0:1:1"), 2);
@@ -194,7 +205,15 @@ is(Dumper($x), Dumper ($y));
 # ------------------------------------------------------------------ #
 # Figure out how to add tests for the events
 # ------------------------------------------------------------------ #
+# Let us start editing
+#print Dumper $treemaker->{treeview_columns};
+$CELL = ['0:1:0', '3', '120'];
+$treemaker->{tree_view_full}->set_cursor (Gtk2::TreePath->new_from_string("0:1:0"), $treemaker->{treeview_columns}->[3], TRUE);
+$window->get_focus->activate;
 
+$CELL = ['0:0:1', '1', '310'];
+$treemaker->{tree_view_full}->set_cursor (Gtk2::TreePath->new_from_string("0:0:1"), $treemaker->{treeview_columns}->[1], TRUE);
+$window->get_focus->activate;
 
 __DATA__
 #state,city,product,date,text,editable,underline,background

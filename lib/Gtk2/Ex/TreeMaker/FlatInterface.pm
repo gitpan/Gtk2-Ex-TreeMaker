@@ -1,9 +1,10 @@
 package Gtk2::Ex::TreeMaker::FlatInterface;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use strict;
 use warnings;
+use Carp;
 use Data::Dumper;
 
 =head1 NAME
@@ -23,10 +24,12 @@ Accepts no arguments. Just returns a reference to the object
 =cut
 
 sub new {
-   my ($class) = @_;
-   my $self  = {};
-   bless ($self, $class);
-   return $self;
+	my ($class) = @_;
+	my $self  = {};
+	$self->{column_count} = undef;
+	$self->{record_count} = 0;
+	bless ($self, $class);
+	return $self;
 }
 
 =head2 Gtk2::Ex::TreeMaker::FlatInterface->flat_to_tree
@@ -35,11 +38,11 @@ Accepts an array of arrays (a set of relational records) as its input. Returns a
 
 Here is a sample input:
 
-   my $recordset = [
-      ['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
-      ['Texas','Dallas','Veggies','Jan-2004','120',1,0,'blue'],
-      ['Texas','Austin','Fruits','Nov-2003','310',1,1,'white'],
-   ];
+	my $recordset = [
+		['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
+		['Texas','Dallas','Veggies','Jan-2004','120',1,0,'blue'],
+		['Texas','Austin','Fruits','Nov-2003','310',1,1,'white'],
+	];
 
 Here is the corresponding output:
 
@@ -105,59 +108,68 @@ This data structure is really the key input into the Gtk2::Ex::TreeMaker module.
 =cut
 
 sub flat_to_tree {
-   my ($self, $data_attributes, $flat) = @_;
-   my @attributes;
-   foreach my $attr (@$data_attributes) {
-   	foreach my $key (keys %$attr) {
-   		push @attributes, $key;
-   	}
-   }   
-   my $intermediate = _flat_to_intermediate(\@attributes, $flat);
-   my $withroot = {};
-   $withroot->{'ROOT'} = $intermediate;
-   my $tree = _intermediate_to_tree($withroot);
-   return $tree;
+	my ($self, $data_attributes, $flat) = @_;
+	my @attributes;
+	foreach my $attr (@$data_attributes) {
+		foreach my $key (keys %$attr) {
+			push @attributes, $key;
+		}
+	}   
+	my $intermediate = $self->_flat_to_intermediate(\@attributes, $flat);
+	my $withroot = {};
+	$withroot->{'ROOT'} = $intermediate;
+	my $tree = _intermediate_to_tree($withroot);
+	return $tree;
 }
 
 # This is a private method
 sub _flat_to_intermediate {
-   my ($attributes, $flat) = @_;
-   my $intermediate = {};  
-   foreach my $record (@$flat) {
-      my $sub_intermediate = $intermediate;
-      foreach (my $i=0; $i<$#{@$record}-$#{@$attributes}; $i++){
-         my $column = $record->[$i];
-         next unless $column;
-         if (!exists $sub_intermediate->{$column}) {
-            $sub_intermediate->{$column} = {};
-         }
-         $sub_intermediate = $sub_intermediate->{$column};        
-      }
-      foreach (my $i=$#{@$record}-$#{@$attributes}; $i<=$#{@$record}; $i++){
-      	$sub_intermediate->{$attributes->[$i-$#{@$record}+$#{@$attributes}]} = $record->[$i]; 
-      }
-   }
-   return $intermediate;
+	my ($self, $attributes, $flat) = @_;
+	my $intermediate = {};  
+	foreach my $record (@$flat) {
+		my $sub_intermediate = $intermediate;
+		$self->{record_count}++;
+		if ($self->{column_count}) {
+			if ($self->{column_count} != $#{@$record}) {
+				carp "Warning ! Input record expected ".($self->{column_count}+1)." columns; got ".($#{@$record}+1).
+					" at record number ".$self->{record_count};
+			}
+		} else {
+			$self->{column_count} = $#{@$record};
+		}
+		foreach (my $i=0; $i<$#{@$record}-$#{@$attributes}; $i++){
+			my $column = $record->[$i];
+			next unless $column;
+			if (!exists $sub_intermediate->{$column}) {
+				$sub_intermediate->{$column} = {};
+			}
+			$sub_intermediate = $sub_intermediate->{$column};        
+		}
+		foreach (my $i=$#{@$record}-$#{@$attributes}; $i<=$#{@$record}; $i++){
+			$sub_intermediate->{$attributes->[$i-$#{@$record}+$#{@$attributes}]} = $record->[$i]; 
+		}
+	}
+	return $intermediate;
 }
 
 # This is a private method
 sub _intermediate_to_tree {
-   my ($intermediate) = shift;
-   foreach my $singlekey ( keys %$intermediate) {
-      my $node = {};
-      $node->{'Name'} = $singlekey;
-      foreach my $key (keys %{$intermediate->{$singlekey}}) {
-         if (ref ($intermediate->{$singlekey}->{$key}) eq 'HASH') {
-            $node->{'Node'} = [] unless ($node->{'Node'});
-            my $newtree = {};
-            $newtree->{$key} = $intermediate->{$singlekey}->{$key};
-            push @{$node->{'Node'}}, _intermediate_to_tree($newtree);
-         } else {
-            $node->{$key} = $intermediate->{$singlekey}->{$key};
-         }
-      }
-      return $node;
-   }
+	my ($intermediate) = shift;
+	foreach my $singlekey ( keys %$intermediate) {
+		my $node = {};
+		$node->{'Name'} = $singlekey;
+		foreach my $key (keys %{$intermediate->{$singlekey}}) {
+			if (ref ($intermediate->{$singlekey}->{$key}) eq 'HASH') {
+				$node->{'Node'} = [] unless ($node->{'Node'});
+				my $newtree = {};
+				$newtree->{$key} = $intermediate->{$singlekey}->{$key};
+				push @{$node->{'Node'}}, _intermediate_to_tree($newtree);
+			} else {
+				$node->{$key} = $intermediate->{$singlekey}->{$key};
+			}
+		}
+		return $node;
+	}
 }
 
 1;
@@ -171,6 +183,10 @@ Ofey Aikon, C<< <ofey.aikon at gmail dot com> >>
 =head1 BUGS
 
 You tell me. Send me an email !
+
+=head1 ACKNOWLEDGEMENTS
+
+To the wonderful gtk-perl-list
 
 =head1 COPYRIGHT & LICENSE
 

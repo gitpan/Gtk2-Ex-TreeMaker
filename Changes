@@ -32,3 +32,8 @@ Revision history for Gtk2-Ex-TreeMaker
 	* These signals are applicable only for the 'hyperlinked' cells. Call-back will be called when the mouse enters or leaves a 'hyperlinked' cell.
 	* Updated the example to reflect the new capability
 	* Updated the documentation to reflect the new capability
+
+0.08	Feb 23, 2005
+	* Fixed packaging issues
+	* Fixed bugs related to null values if no attributes are specified
+	* Added more tests

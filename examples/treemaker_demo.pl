@@ -12,11 +12,11 @@ use Gtk2::Ex::TreeMaker;
 # The first entry should be the title of the left side of the FreezePane.
 my $column_names = [ 
 	'Region',
-   'Nov-2003', 'Dec-2003', 'Jan-2004', 
-   'Feb-2004', 'Mar-2004', 'Apr-2004',
-   'May-2004', 'Jun-2004', 'Jul-2004' 
+	'Nov-2003', 'Dec-2003', 'Jan-2004', 
+	'Feb-2004', 'Mar-2004', 'Apr-2004',
+	'May-2004', 'Jun-2004', 'Jul-2004' 
 ];
-
+	
 # All the attributes of the cell in the treeview are specified here
 # The value for these attributes are to be populated from the recordset
 # The assumption is that the attributes are contained in the data record
