@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker::FlatInterface;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use strict;
 use warnings;
@@ -35,47 +35,70 @@ Accepts an array of arrays (a set of relational records) as its input. Returns a
 
 Here is a sample input:
 
-   my $input = [
-      ['Texas','Dallas','Fruits','Dec-2003','300'],
-      ['Texas','Dallas','Veggies','Jan-2004','120'],
-      ['Texas','Austin','Fruits','Nov-2003','310'],
-      ['Texas','Austin','Veggies','Feb-2004','20']
+   my $recordset = [
+      ['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
+      ['Texas','Dallas','Veggies','Jan-2004','120',1,0,'blue'],
+      ['Texas','Austin','Fruits','Nov-2003','310',1,1,'white'],
    ];
 
 Here is the corresponding output:
 
    my $output = {
-             'Node' => [
-                         {
-                           'Node' => [
-                                       {
-                                         'Feb-2004' => '20',
-                                         'Jun-2004' => '80',
-                                         'Name' => 'Veggies'
-                                       },
-                                       {
-                                         'Nov-2003' => '310',
-                                         'Name' => 'Fruits'
-                                       }
-                                     ],
-                           'Name' => 'Austin'
-                         },
-                         {
-                           'Node' => [
-                                       {
-                                         'Jan-2004' => '120',
-                                         'Name' => 'Veggies'
-                                       },
-                                       {
-                                         'Dec-2003' => '300',
-                                         'Name' => 'Fruits'
-                                       }
-                                     ],
-                           'Name' => 'Dallas'
-                         }
-                       ],
-             'Name' => 'Texas'
-           };
+          'Node' => [
+                      {
+                        'Node' => [
+                                    {
+                                      'Node' => [
+                                                  {
+                                                    'Node' => [
+                                                                {
+                                                                  'text' => '310',
+                                                                  'editable' => 1,
+                                                                  'background' => 'white',
+                                                                  'hyperlinked' => 1,
+                                                                  'Name' => 'Nov-2003'
+                                                                }
+                                                              ],
+                                                    'Name' => 'Fruits'
+                                                  }
+                                                ],
+                                      'Name' => 'Austin'
+                                    },
+                                    {
+                                      'Node' => [
+                                                  {
+                                                    'Node' => [
+                                                                {
+                                                                  'text' => '120',
+                                                                  'editable' => 1,
+                                                                  'background' => 'blue',
+                                                                  'hyperlinked' => 0,
+                                                                  'Name' => 'Jan-2004'
+                                                                }
+                                                              ],
+                                                    'Name' => 'Veggies'
+                                                  },
+                                                  {
+                                                    'Node' => [
+                                                                {
+                                                                  'text' => '300',
+                                                                  'editable' => 0,
+                                                                  'background' => 'red',
+                                                                  'hyperlinked' => 1,
+                                                                  'Name' => 'Dec-2003'
+                                                                }
+                                                              ],
+                                                    'Name' => 'Fruits'
+                                                  }
+                                                ],
+                                      'Name' => 'Dallas'
+                                    }
+                                  ],
+                        'Name' => 'Texas'
+                      }
+                    ],
+          'Name' => 'ROOT'
+        };
 
 This data structure is really the key input into the Gtk2::Ex::TreeMaker module. If you can provide this data structure through external means, then we can build Gtk2::Ex::TreeMaker using that. More on this later...
 
@@ -143,14 +166,11 @@ __END__
 
 =head1 AUTHOR
 
-Ofey Aikon, C<< <ofey_aikon@yahoo.com> >>
+Ofey Aikon, C<< <ofey.aikon at gmail dot com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to
-C<bug-gtk2-ex-recordsfilter@rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org>.  I will be notified, and then you'll automatically
-be notified of progress on your bug as I make changes.
+You tell me. Send me an email !
 
 =head1 COPYRIGHT & LICENSE
 

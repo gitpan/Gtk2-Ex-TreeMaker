@@ -8,3 +8,4 @@ lib/Gtk2/Ex/TreeMaker/FlatInterface.pm
 t/00.load.t
 t/pod-coverage.t
 t/pod.t
+examples/treemaker_demo.pl

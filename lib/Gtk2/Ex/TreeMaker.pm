@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Gtk2::Ex::TreeMaker::FlatInterface;
 
 =head1 NAME
 
-B<Gtk2::Ex::TreeMaker> - A high level widget to represent a set of relational records in a hierarchical spreadsheet kinda display. This task is typical to most of the business application user interfaces.
+Gtk2::Ex::TreeMaker - A high level widget to represent a set of relational records in a hierarchical spreadsheet kinda display. This task is typical to most of the business application user interfaces.
 
 =head1 DESCRIPTION
 
@@ -63,15 +63,15 @@ This high level widget is designed with that purpose in mind. This module will a
       { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
    ];
 
-	# This api will have to be cleaned soon...
-	# Define all the attributes of your records here.
-	my $data_attributes = [
-		{'text' => 'Glib::String'},
-		{'editable' => 'Glib::Boolean'},
-		{'underline' => 'Glib::Boolean'}, 
-		{'background' => 'Glib::String'}, 
-	];
-	
+   # This api will have to be cleaned soon...
+   # Define all the attributes of your records here.
+   my $data_attributes = [
+      {'text' => 'Glib::String'},
+      {'editable' => 'Glib::Boolean'},
+      {'hyperlinked' => 'Glib::Boolean'}, 
+      {'background' => 'Glib::String'}, 
+   ];
+   
    # Here is the set of relational records to be displayed
    my $recordset = [
       ['Texas','Dallas','Fruits','Dec-2003','300',0,1,'red'],
@@ -81,12 +81,11 @@ This high level widget is designed with that purpose in mind. This module will a
    ];
 
    # Set the data_attributes and column_names first
-   $treemaker->set_column_names($data_attributes, $column_names);
+   $treemaker->set_meta_data($data_attributes, $column_names);
    
    # Now set the data_flat using the relational records
    $treemaker->set_data_flat($recordset);
    
-
    # Build the model
    $treemaker->build_model;
 
@@ -103,14 +102,40 @@ This high level widget is designed with that purpose in mind. This module will a
 
 =head1 METHODS
 
-=head2 Gtk2::Ex::TreeMaker->new
+=head2 Gtk2::Ex::TreeMaker->new($column_names, $data_attributes)
 
-This is the constructor. Accepts no arguments. Just returns a reference to the object
+This is the constructor. Accepts two arguments.
+
+First argument is the column_names list. Each element of the array is a hash. The hash uses 'ColumnName' as the key. For example,
+
+   my $column_names = [
+      { ColumnName => 'Name' },
+      { ColumnName => 'Nov-2003' }, { ColumnName => 'Dec-2003' }, 
+      { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
+   ];
+
+Second argument is the data_attributes list. Here you specify what attributes each record has. For example,
+
+   my $data_attributes = [
+      {'text' => 'Glib::String'},
+      {'editable' => 'Glib::Boolean'},
+      {'hyperlinked' => 'Glib::Boolean'}, 
+      {'background' => 'Glib::String'}, 
+   ];
+
+All the attributes of the cell in the treeview are specified here. The value for these attributes are to be populated from the recordset. 
+The assumption is that the attributes are contained in the data record
+in the same order towards the B<**end**> of the record. (the last few fields)
+
+Since we are using C<Gtk2::CellRendererText> in the TreeView, any of the properties
+of the C<Gtk2::CellRendererText> can be passed using this mechanism
+In addition to the properties of the CellRendererText, I have also added a
+custom property called 'hyperlinked'.
 
 =cut
 
 sub new {
-   my ($class) = @_;
+   my ($class, $column_names, $data_attributes) = @_;
    my $self  = {};
    $self->{data_tree} = undef;
    $self->{data_attributes} = undef;
@@ -123,14 +148,15 @@ sub new {
    $self->{tree_view_full} = undef;
    $self->{tree_view_frozen} = undef;
    $self->{chosen_column} = undef;
-   $self->{cell_edited} = undef;
+   $self->{signals} = undef;
    bless ($self, $class);
+   $self->set_meta_data($column_names, $data_attributes);
    return $self;
 }
 
-=head2 Gtk2::Ex::TreeMaker->set_data_flat
+=head2 Gtk2::Ex::TreeMaker->set_data_flat($data_flat)
 
-This sub accepts a set of relational records (an array of arrays) as the argument. For example,
+This sub is used to inject the relational recordset into the widget. This sub accepts a set of relational records (an array of arrays) as the argument. For example,
 
    my $recordset = [
       ['Texas','Dallas','Fruits','Dec-2003','300'],
@@ -145,7 +171,7 @@ sub set_data_flat {
    my ($self, $data_flat) = @_;
    my $flat_interface = Gtk2::Ex::TreeMaker::FlatInterface->new();
    my $data_tree = $flat_interface->flat_to_tree($self->{data_attributes}, $data_flat);
-   $self->_set_data_tree($data_tree); 
+   $self->{data_tree} = $data_tree;
 }
 
 # This method is temporarily not required. Will come back to it later
@@ -155,42 +181,27 @@ sub set_data_tree_depth {
    $self->{data_tree_depth} = $data_tree_depth;
 }
 
-# Private method
-sub _set_data_tree {
-   my ($self, $data_tree) = @_;
-   $self->{data_tree} = $data_tree;
-}
+=head2 Gtk2::Ex::TreeMaker->signal_connect($signal_name, $action)
 
-sub set_cell_edited {
-   my ($self, $cell_edited) = @_;
-   $self->{cell_edited} = $cell_edited;
-}
+Currently, two signals are suppoted
 
-=head2 Gtk2::Ex::TreeMaker->set_column_names
+=over 4
 
-There are two arguments.
+=item * cell-edited
 
-First argument is the data_attributes. Here you specify what attributes each record has. For example,
+=item * cell-clicked
 
-	my $data_attributes = [
-		{'text' => 'Glib::String'},
-		{'editable' => 'Glib::Boolean'},
-		{'underline' => 'Glib::Boolean'}, 
-		{'background' => 'Glib::String'}, 
-	];
-
-Second argument is an array. Each element of the array is a hash. The hash uses 'ColumnName' as the key. For example,
-
-   my $column_names = [
-      { ColumnName => 'Name' },
-      { ColumnName => 'Nov-2003' }, { ColumnName => 'Dec-2003' }, 
-      { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
-   ];
+=back
 
 =cut
 
-sub set_column_names {
-   my ($self, $data_attributes, $column_names) = @_;
+sub signal_connect {
+   my ($self, $signal, $action) = @_;
+   $self->{signals}->{$signal} = $action;
+}
+
+sub set_meta_data {
+   my ($self, $column_names, $data_attributes) = @_;
    $self->{data_attributes} = $data_attributes;
    # Add an emtpy column in the end for display purposes
    push @$column_names, { ColumnName => ''};
@@ -200,11 +211,19 @@ sub set_column_names {
    my @column_attr;
    my $count=0;
    foreach my $attr (@$data_attributes) {
-   	foreach my $key (keys %$attr) {
-   		push @temp, $attr->{$key};
-   		push @column_attr, $key;
-   		push @column_attr, $count++;
-   	}
+      foreach my $key (keys %$attr) {
+         push @temp, $attr->{$key};
+         
+         # Here is the logic for dealing with the 'custom' properties
+         # All the properties that don't belong to the CellRendererText has to be handled here
+         # Else, the CellRendererText is gonna complain.
+         if ($key eq 'hyperlinked') {
+            $key = 'underline';
+         }
+         
+         push @column_attr, $key;
+         push @column_attr, $count++;
+      }
    }   
    my @tree_store_full_types = map {@temp} @{$self->{column_names}};
    my @tree_store_frozen_types = map {@temp} @{$self->{frozen_column}};
@@ -224,11 +243,53 @@ sub set_column_names {
       
    $self->_create_columns ($self->{column_names}, $tree_store_full, $tree_view_full);
    # There is only one column (the first column) in this case
-   my $column_name =  $self->{frozen_column}->[0]->{ColumnName};	
+   my $column_name =  $self->{frozen_column}->[0]->{ColumnName};  
    my $column = Gtk2::TreeViewColumn->new_with_attributes(
                      $column_name, Gtk2::CellRendererText->new(), @column_attr);
    $column->set_resizable(TRUE);
    $tree_view_frozen->append_column($column);   
+
+   # If the cell is hyperlinked, then change the mouse pointer to something else
+   # This will give a visual feedback to the user that he should click on the cell
+   $tree_view_full->signal_connect('motion-notify-event' =>
+      sub {        
+         my ($self, $event) = @_;
+         my ($path, $column, $cell_x, $cell_y) = $self->get_path_at_pos ($event->x, $event->y);
+         my $cursor = undef;
+         if ($path) {
+            my $model = $self->get_model;
+            my $hyperlinked = $model->get ($model->get_iter ($path), $column->{hyperlinked});
+            if ($hyperlinked) {
+               $self->{cursor} = Gtk2::Gdk::Cursor->new ('hand2')
+                  unless $self->{cursor};
+               $cursor = $self->{cursor};
+            }
+         }
+         $event->window->set_cursor ($cursor);
+         return 0;
+      }
+   ); 
+   
+
+   my $treemaker_self = $self;
+   
+   $tree_view_full->signal_connect('button-press-event' =>
+      sub {        
+         my ($self, $event) = @_;
+         my ($path, $column, $cell_x, $cell_y) = $self->get_path_at_pos ($event->x, $event->y);
+         my $cursor = undef;
+         if ($path) {
+            my $model = $self->get_model;
+            my $hyperlinked = $model->get ($model->get_iter ($path), $column->{hyperlinked});
+            if ($hyperlinked) {
+               &{$treemaker_self->{signals}->{'cell-clicked'}}($treemaker_self, $path, $column->{column_number});
+            }
+         }
+         $event->window->set_cursor ($cursor);
+         return 0;
+      }
+   ); 
+
 }
 
 sub clear_model {
@@ -329,45 +390,46 @@ sub _synchronize_tree_selection {
 sub _append_children {
    my ($self, $tree_store, $iter, $data_tree, $columns) = @_;
    if ($data_tree ) {   
-   	my $count = 0;  
-   	if ($data_tree->{'Node'}) {
-			my $child_iter = $tree_store->append ($iter);
-			for my $column(@$columns) {
-				my $column_name = $column->{ColumnName};
+      my $count = 0;  
+      if ($data_tree->{'Node'}) {
+         my $child_iter = $tree_store->append ($iter);
+         for my $column(@$columns) {
+            my $column_name = $column->{ColumnName};
 
-				# Ignore the real name of the first column. Use the special value called 'Name'
-				# so that the tree traversal is correct.
-				$column_name = 'Name' if ($count == 0);
+            # Ignore the real name of the first column. Use the special value called 'Name'
+            # so that the tree traversal is correct.
+            $column_name = 'Name' if ($count == 0);
 
-				if ($data_tree->{$column_name}) {
-					$tree_store->set($child_iter, $count, $data_tree->{$column_name});
-				}
-				$count+=$#{@{$self->{data_attributes}}}+1;
-			}
-			foreach my $child(@{$data_tree->{'Node'}}) {
-				$self->_append_children($tree_store, $child_iter, $child, $columns);
-			}
-		} else {
-			for my $column(@$columns) {
-				my $column_name = $column->{ColumnName};
-				next unless ($column_name);
-				if ($data_tree->{'Name'} eq $column_name) {
-					foreach my $attr (@{$self->{data_attributes}}) {
-						foreach my $key (keys %$attr) {
-							$tree_store->set($iter, $count++, $data_tree->{$key});
-						}
-					}
-				}
-				$count+=$#{@{$self->{data_attributes}}}+1;
-			}		
-		}
-		
+            if ($data_tree->{$column_name}) {
+               $tree_store->set($child_iter, $count, $data_tree->{$column_name});
+            }
+            $count+=$#{@{$self->{data_attributes}}}+1;
+         }
+         foreach my $child(@{$data_tree->{'Node'}}) {
+            $self->_append_children($tree_store, $child_iter, $child, $columns);
+         }
+      } else {
+         for my $column(@$columns) {
+            my $column_name = $column->{ColumnName};
+            next unless ($column_name);
+            if ($data_tree->{'Name'} eq $column_name) {
+               foreach my $attr (@{$self->{data_attributes}}) {
+                  foreach my $key (keys %$attr) {
+                     $tree_store->set($iter, $count++, $data_tree->{$key});
+                  }
+               }
+            }
+            $count+=$#{@{$self->{data_attributes}}}+1;
+         }     
+      }
+      
    }
 }
 
 sub _create_columns {
    my ($self, $all_columns, $tree_store, $tree_view )=@_;
    my $column_count = 0;
+   my $column_number = 0;
    for my $column (@$all_columns) {
       my $column_name =  $column->{ColumnName};
       my $cell = Gtk2::CellRendererText->new;
@@ -390,21 +452,33 @@ sub _create_columns {
 
                # Call the call-back hook specified
                # Hey watch out for a division by zero !!! :) Come back later and fix it...
-               &{$self->{cell_edited}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
-
+               &{$self->{signals}->{'cell-edited'}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
          });
 
-   	my @column_attr;
-		my $count=0;
-		foreach my $attr (@{$self->{data_attributes}}) {
-			foreach my $key (keys %$attr) {
-				push @column_attr, $key;
-				push @column_attr, $column_count + $count++;
-			}
-		}   
+      my @column_attr;
+      my $count=0;
+      my $attr_pos_hyperlinked = 0;
+      foreach my $attr (@{$self->{data_attributes}}) {
+         foreach my $key (keys %$attr) {
+            if ($key eq 'hyperlinked') {
+               $key = 'underline';
+               $attr_pos_hyperlinked = $column_count+$count;
+            }
+            push @column_attr, $key;
+            push @column_attr, $column_count + $count++;
+         }
+      }   
       
-		my $column = Gtk2::TreeViewColumn->new_with_attributes(
-			$column_name, $cell, text => $column_count, @column_attr);
+      my $column = Gtk2::TreeViewColumn->new_with_attributes(
+         $column_name, $cell, text => $column_count, @column_attr);
+      $column->set_title($column_name);
+
+      # Keep this for later; the TreeViewColumn doesn't allow us to
+      # query the attribute list, so we have to keep this information
+      # for ourselves.
+      $column->{hyperlinked} = $attr_pos_hyperlinked;
+      $column->{column_number} = $column_number++;
+      
       $column->set_resizable(TRUE);
       $tree_view->append_column($column);
 
@@ -428,7 +502,7 @@ Using this information, the function then traverses the internal data structure 
 =cut
 
 sub locate_record {
-   my ($self, $edit_path, $column_id, $newtext) = @_; 
+   my ($self, $edit_path, $column_id) = @_; 
    my $record;
    
    # Drill down the $tree_path and keep adding entries into the record
@@ -439,24 +513,23 @@ sub locate_record {
       $temp = $temp->{'Node'}->[$index];
       push @$record, $temp->{'Name'};
    }
-   my $column_name = $self->{column_names}->[$column_id]->{'ColumnName'};
-   my $oldtext = $temp->{'Node'}->[0]->{'text'};
-   
+   my $column_name = $self->{column_names}->[$column_id]->{'ColumnName'};   
    # Now the hierarchical tree elements have been added into the record
    # Next we just need to add the correct column_name
    push @$record, $column_name;
+   foreach my $node (@{$temp->{'Node'}}) {
 
-   # Now report the value_change into the $record
-   my $value = { 'NEW_VALUE' => $newtext, 'OLD_VALUE' => $oldtext };
-   
-   push @$record, $value;
-   
+      if ($node->{'Name'} eq $column_name) {
+         push @$record, $node;
+      }
+   }
    return $record;
 }
 
+###################################################################
 # This method is temporarily out of service.
 # We will revive this later
-sub _record_changes {
+sub _monitor_changes {
    my ($self, $edit_path, $column_id, $newtext) = @_;
    my @tree_path = split /:/, $edit_path->to_string;
    my @record;
@@ -475,6 +548,7 @@ sub _record_changes {
    $record[-1] = $newtext;
    push @{$self->{edited_data_flat}}, \@record;
 }
+###################################################################
 
 1;
 
@@ -486,26 +560,25 @@ Here is a list of stuff that I plan to add to this module.
 
 =over 4
 
-=item * Not all cells need to be editable
+=item * Not all cells need to be editable (DONE ! Included in this version)
 
 Provide some kind of criteria to decide whether a cell should be editable or not.
 
-=item * Some cells may need to be "hyperlinked"
+=item * Some cells may need to be "hyperlinked" (DONE ! Included in this version)
 
 Some of the cells may have to be made clickable (hyperlinks). When clicked, may be the cell can drop down a menu or lead you to another view. Provide a callback on click (or rightclick) on the cells.
+
+=item * Wake Up ! Add some tests.
 
 =back
 
 =head1 AUTHOR
 
-Ofey Aikon, C<< <ofey_aikon@yahoo.com> >>
+Ofey Aikon, C<< <ofey.aikon at gmail dot com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to
-C<bug-gtk2-ex-recordsfilter@rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org>.  I will be notified, and then you'll automatically
-be notified of progress on your bug as I make changes.
+You tell me. Send me an email !
 
 =head1 COPYRIGHT & LICENSE
 

@@ -4,9 +4,9 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Gtk2::Ex::TreeMaker',
-    AUTHOR              => 'Ofey Aikon <ofey_aikon@yahoo.com>',
-    VERSION_FROM        => 'lib\Gtk2\Ex\TreeMaker.pm',
-    ABSTRACT_FROM       => 'lib\Gtk2\Ex\TreeMaker.pm',
+    AUTHOR              => 'Ofey Aikon <ofey.aikon@gmail.com>',
+    VERSION_FROM        => 'lib/Gtk2/Ex/TreeMaker.pm',
+    ABSTRACT_FROM       => 'lib/Gtk2/Ex/TreeMaker.pm',
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,

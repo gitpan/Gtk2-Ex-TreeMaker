@@ -12,7 +12,13 @@ Revision history for Gtk2-Ex-TreeMaker
 	* Cleaned up META.yml
 	* Cleaned up MANIFEST
 	* Added attributes like editable, underline etc.
-
 	
+0.05	Feb 4, 2005
+	* Added a custom attribute called 'hyperlinked'. The mouse pointer changes when moved over a 'hyperlinked' cell. A specified call-back is called when the cell is clicked.
+	* In addition to this custom attribute, any of the attributes of the Gtk2::CellRendererText can also be passed to this widget. (background, editable etc)
+	* Added signal handler for 'cell-clicked', 'cell-edited'. Cleaned up the code defining the signal_connect.
+	* Cleaned up code in other areas too.
+	* Updated documentation.
+	* Updated the MANIFEST to include the /examples.
 	
 
