@@ -5,7 +5,5 @@ Makefile.PL
 README
 lib/Gtk2/Ex/TreeMaker.pm
 lib/Gtk2/Ex/TreeMaker/FlatInterface.pm
-t/00.load.t
-t/pod-coverage.t
-t/pod.t
+t/treemaker_test_1.t
 examples/treemaker_demo.pl

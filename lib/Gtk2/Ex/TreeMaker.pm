@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use strict;
 use warnings;
@@ -58,9 +58,8 @@ This high level widget is designed with that purpose in mind. This module will a
 
    # Create the column names. The first columnname has to be 'Name'
    my $column_names = [
-      { ColumnName => 'Name' },
-      { ColumnName => 'Nov-2003' }, { ColumnName => 'Dec-2003' }, 
-      { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
+      'Name',
+      'Nov-2003', 'Dec-2003', 'Jan-2004', 'Feb-2004'
    ];
 
    # This api will have to be cleaned soon...
@@ -109,9 +108,8 @@ This is the constructor. Accepts two arguments.
 First argument is the column_names list. Each element of the array is a hash. The hash uses 'ColumnName' as the key. For example,
 
    my $column_names = [
-      { ColumnName => 'Name' },
-      { ColumnName => 'Nov-2003' }, { ColumnName => 'Dec-2003' }, 
-      { ColumnName => 'Jan-2004' }, { ColumnName => 'Feb-2004' }
+      'Name',
+      'Nov-2003', 'Dec-2003', 'Jan-2004', 'Feb-2004'
    ];
 
 Second argument is the data_attributes list. Here you specify what attributes each record has. For example,
@@ -201,8 +199,12 @@ sub signal_connect {
 }
 
 sub set_meta_data {
-   my ($self, $column_names, $data_attributes) = @_;
+   my ($self, $col_names, $data_attributes) = @_;
    $self->{data_attributes} = $data_attributes;
+   my $column_names = [];
+  	foreach my $col_name(@$col_names) {
+  		push @$column_names, { ColumnName => $col_name};
+  	}
    # Add an emtpy column in the end for display purposes
    push @$column_names, { ColumnName => ''};
    $self->{column_names} = $column_names;
@@ -459,11 +461,14 @@ sub _create_columns {
       my $count=0;
       my $attr_pos_hyperlinked = 0;
       foreach my $attr (@{$self->{data_attributes}}) {
-         foreach my $key (keys %$attr) {
+         foreach my $key (keys %$attr) {         	
+         	# The custom attributes that we created should not be passed 
+         	# on to the CellRendererText. Either remove them or replace them with
+         	# something that makes sense to the CellRendererText
             if ($key eq 'hyperlinked') {
                $key = 'underline';
                $attr_pos_hyperlinked = $column_count+$count;
-            }
+            }            
             push @column_attr, $key;
             push @column_attr, $column_count + $count++;
          }

@@ -7,14 +7,14 @@ use constant FALSE => !TRUE;
 
 use Gtk2::Ex::TreeMaker;
 
+
 # Create an array to contain the column_names. These names appear as the header for each column.
-# The entries of the arrays should be hashes. Each has should use 'ColumnName' as the key.
 # The first entry should be the title of the left side of the FreezePane.
-my $column_names = [
-   { ColumnName => 'Region' },
-   { ColumnName => 'Nov-2003' }, { ColumnName => 'Dec-2003' }, { ColumnName => 'Jan-2004' },
-   { ColumnName => 'Feb-2004' }, { ColumnName => 'Mar-2004' }, { ColumnName => 'Apr-2004' },
-   { ColumnName => 'May-2004' }, { ColumnName => 'Jun-2004' }, { ColumnName => 'Jul-2004' }
+my $column_names = [ 
+	'Region',
+   'Nov-2003', 'Dec-2003', 'Jan-2004', 
+   'Feb-2004', 'Mar-2004', 'Apr-2004',
+   'May-2004', 'Jun-2004', 'Jul-2004' 
 ];
 
 # All the attributes of the cell in the treeview are specified here

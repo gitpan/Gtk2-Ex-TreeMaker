@@ -21,4 +21,9 @@ Revision history for Gtk2-Ex-TreeMaker
 	* Updated documentation.
 	* Updated the MANIFEST to include the /examples.
 	
+0.06	Feb 8, 2005
+	* Fixed the issue with the Makefile.pl
+	* Added tests (40 of them) to verify the model that is being created
+	* (Still to add tests for the UI events, cell-edited, cell-clicked etc)
+	* Cleaned up the API for setting the column_names.
 
