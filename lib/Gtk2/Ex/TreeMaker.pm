@@ -1,10 +1,9 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use strict;
 use warnings;
-use Carp;
 use constant TRUE => 1;
 use constant FALSE => !TRUE;
 use Data::Dumper;
@@ -158,7 +157,6 @@ sub new {
 	$self->{tree_view_frozen} = undef;
 	$self->{chosen_column} = undef;
 	$self->{signals} = undef;
-	carp "Testing\n";
 	bless ($self, $class);
 	$self->set_meta_data($column_names, $data_attributes);
 	return $self;
@@ -251,6 +249,7 @@ sub set_meta_data {
 			push @column_attr, $count++;
 		}
 	}   
+
 	my @tree_store_full_types = map {@temp} @{$self->{column_names}};
 	my @tree_store_frozen_types = map {@temp} @{$self->{frozen_column}};
 	my $tree_store_full = Gtk2::TreeStore->new(@tree_store_full_types);
@@ -262,6 +261,9 @@ sub set_meta_data {
 
 	$tree_view_full->set_rules_hint(TRUE);
 	$tree_view_frozen->set_rules_hint(TRUE);
+
+	#$tree_view_full->get_selection->set_mode ('none');
+	#$tree_view_frozen->get_selection->set_mode ('none');
 
 	_synchronize_trees($tree_view_frozen, $tree_view_full);
 	$self->{tree_view_full} = $tree_view_full;
@@ -298,16 +300,18 @@ sub set_meta_data {
 					# We also need to throw the cell-enter event from here
 					# Note: Only hyperlinked cells should throw the cell-enter and leave events
 					if ($treemaker_self->{signals}->{'cell-enter'}) {
-					    &{$treemaker_self->{signals}->{'cell-enter'}}($treemaker_self, $path, $column->{column_number})
-							unless $self->{'cell-hovered'};
+					    &{$treemaker_self->{signals}->{'cell-enter'}}
+							($treemaker_self, $path, $column->{column_number})
+								unless $self->{'cell-hovered'};
 						$self->{'cell-hovered'} = TRUE;
 					}
 
 				} else {
 					# Throw the cell-leave event here
 					if ($treemaker_self->{signals}->{'cell-leave'}) {
-						&{$treemaker_self->{signals}->{'cell-leave'}}($treemaker_self, $path, $column->{column_number})
-							if $self->{'cell-hovered'};
+						&{$treemaker_self->{signals}->{'cell-leave'}}
+							($treemaker_self, $path, $column->{column_number})
+								if $self->{'cell-hovered'};
 						$self->{'cell-hovered'} = FALSE;                        	
 					}
 				}
@@ -323,12 +327,13 @@ sub set_meta_data {
 			my ($self, $event) = @_;
 			my ($path, $column, $cell_x, $cell_y) = $self->get_path_at_pos ($event->x, $event->y);
 			my $cursor = undef;
-			if ($path & defined $column->{hyperlinked}) {
+			if ($path && defined $column->{hyperlinked}) {
 				my $model = $self->get_model;
 				my $hyperlinked = $model->get ($model->get_iter ($path), $column->{hyperlinked});
 				if ($hyperlinked) {
 					if ($treemaker_self->{signals}->{'cell-clicked'}){
-						&{$treemaker_self->{signals}->{'cell-clicked'}}($treemaker_self, $path, $column->{column_number});
+						&{$treemaker_self->{signals}->{'cell-clicked'}}
+							($treemaker_self, $path, $column->{column_number});
 					}
 				}
 			}
@@ -337,6 +342,12 @@ sub set_meta_data {
 		}
 	); 
 
+}
+
+sub set_selection_mode {
+	my ($self, $mode) = @_;
+	$self->{tree_view_full}->get_selection->set_mode($mode);
+	$self->{tree_view_frozen}->get_selection->set_mode($mode);
 }
 
 sub clear_model {
@@ -466,7 +477,7 @@ sub _append_children {
 						}
 					}
 				}
-				$count+=$#{@{$self->{data_attributes}}}+1;
+				$count += $#{@{$self->{data_attributes}}}+1;
 			}
 		}
 
@@ -500,7 +511,8 @@ sub _create_columns {
 				# Call the call-back hook specified
 				# Hey watch out for a division by zero !!! :) Come back later and fix it...
 				if ($self->{signals}->{'cell-edited'}){
-					&{$self->{signals}->{'cell-edited'}}($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
+					&{$self->{signals}->{'cell-edited'}}
+						($self, $path, $column_id/($#{@{$self->{data_attributes}}}+1), $newtext);
 				}
 			}
 		);
@@ -515,7 +527,7 @@ sub _create_columns {
 				# something that makes sense to the CellRendererText
 				if ($key eq 'hyperlinked') {
 					$key = 'underline';
-					$attr_pos_hyperlinked = $column_count+$count;
+					$attr_pos_hyperlinked = $column_count + $count;
 				}            
 				push @column_attr, $key;
 				push @column_attr, $column_count + $count++;

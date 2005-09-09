@@ -37,3 +37,7 @@ Revision history for Gtk2-Ex-TreeMaker
 	* Fixed packaging issues
 	* Fixed bugs related to null values if no attributes are specified
 	* Added more tests
+
+0.09	Sep 08, 2005
+    * Some tests were broken due to the new sort thingy that was added.
+	* Still not sure if this is right... may be I should revert

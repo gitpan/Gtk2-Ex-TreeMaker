@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker::FlatInterface;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use strict;
 use warnings;
@@ -155,10 +155,10 @@ sub _flat_to_intermediate {
 # This is a private method
 sub _intermediate_to_tree {
 	my ($intermediate) = shift;
-	foreach my $singlekey ( keys %$intermediate) {
+	foreach my $singlekey ( sort keys %$intermediate) {
 		my $node = {};
 		$node->{'Name'} = $singlekey;
-		foreach my $key (keys %{$intermediate->{$singlekey}}) {
+		foreach my $key (sort keys %{$intermediate->{$singlekey}}) {
 			if (ref ($intermediate->{$singlekey}->{$key}) eq 'HASH') {
 				$node->{'Node'} = [] unless ($node->{'Node'});
 				my $newtree = {};

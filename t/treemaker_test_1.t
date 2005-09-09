@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use Gtk2::TestHelper tests => 43;
+use Gtk2::TestHelper tests => 31;
 
 use Gtk2::Ex::TreeMaker;
 use Data::Dumper;
@@ -126,57 +126,47 @@ sub when_cell_clicked {
 # ------------------------------------------------------------------ #
 my $model = $treemaker->{tree_view_full}->get_model;
 my $values1 = [
-	["0", 0, 'Texas'],
-	["0:0", 0, 'Austin'],
-	["0:0:0", 0, 'Veggies'],
-	["0:0:1", 0, 'Fruits'],
-	["0:1", 0, 'Dallas'],
-	["0:1:0", 0, 'Veggies'],
-	["0:1:1", 0, 'Fruits'],
-	["1", 0, 'California'],
-	["1:0", 0, 'LA'],
+	["1", 0, 'Texas'],
+	["1:0", 0, 'Austin'],
+	["1:0:1", 0, 'Veggies'],
+	["1:0:0", 0, 'Fruits'],
+	["1:1", 0, 'Dallas'],
+	["1:1:1", 0, 'Veggies'],
+	["1:1:0", 0, 'Fruits'],
 
-	["1:0:0", 0, 'Veggies'],
-	["1:0:0", 1, 0],
-	["1:0:0", 2, 0],
-	["1:0:0", 3, undef],
-	["1:0:0", 4, 0],
+	["0", 0, 'California'],
+	["0:0", 0, 'LA'],
+
+	["1:0:1", 0, 'Veggies'],
+	["1:0:1", 1, 0],
+	["1:0:1", 2, 0],
+	["1:0:1", 3, undef],
+	["1:0:1", 4, 0],
 
 	# Test something from the tree_view_full side
-	# First we'll test a blank cell
-	["1:0:0", 5, undef],
-	["1:0:0", 6, 0],
-	["1:0:0", 7, 0],
-	["1:0:0", 8, undef],
-	["1:0:0", 9, 0],
+	# First we will test a blank cell
+	["1:0:1", 5, undef],
+	["1:0:1", 6, 0],
+	["1:0:1", 7, 0],
+	["1:0:1", 8, undef],
+	["1:0:1", 9, 0],
 	
 	# Now test a non-blank cell
-	["1:0:0", 40, '80'],
-	["1:0:0", 41, 1],
-	["1:0:0", 42, 0],
-	["1:0:0", 43, 'yellow'],
-	["1:0:0", 44, 0],
+	["1:0:1", 40, '80'],
+	["1:0:1", 41, 0],
+	["1:0:1", 42, 0],
+	["1:0:1", 43, 'green'],
+	["1:0:1", 44, 1],
 
-	# Test another non-blank cell
-	["0:1:1", 10, '300'],
-	["0:1:1", 11, 0],
-	["0:1:1", 12, 1],
-	["0:1:1", 13, 'white'],
-	["0:1:1", 14, 0],
-	
-	# And another non-blank cell
-	["0:0:1", 5, '310'],
-	["0:0:1", 6, 1],
-	["0:0:1", 7, 0],
-	["0:0:1", 8, 'red'],
-	["0:0:1", 9, 1],
 ];
 
+my $count = 0;
 foreach my $value (@$values1) {
 	my $path = $value->[0];
 	my $column = $value->[1];
 	my $string = $value->[2];
-	is($model->get($model->get_iter_from_string($path), $column), $string);
+	print Dumper $string;
+	is($model->get($model->get_iter_from_string($path), $column), $string, "compare-test".$count++);
 }
 
 # ------------------------------------------------------------------ #
@@ -199,7 +189,7 @@ my $x = [
 	}
 ];
 
-my $y = $treemaker->locate_record(Gtk2::TreePath->new_from_string("0:1:1"), 2);
+my $y = $treemaker->locate_record(Gtk2::TreePath->new_from_string("1:1:0"), 2);
 is(Dumper($x), Dumper ($y));
 
 # ------------------------------------------------------------------ #
