@@ -1,13 +1,12 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use strict;
 use warnings;
-use constant TRUE => 1;
-use constant FALSE => !TRUE;
-use Data::Dumper;
+use Glib qw(TRUE FALSE);
 use Gtk2::Ex::TreeMaker::FlatInterface;
+use Data::Dumper;
 
 =head1 NAME
 

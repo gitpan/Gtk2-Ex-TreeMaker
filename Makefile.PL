@@ -10,6 +10,11 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
+        'Gtk2' => 0,
+        'Glib' => 0,
+        'Data::Dumper' => 0,
+        'Carp' => 0,
+        'Gtk2::TestHelper' => 0,        
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Gtk2-Ex-TreeMaker-*' },

@@ -39,5 +39,8 @@ Revision history for Gtk2-Ex-TreeMaker
 	* Added more tests
 
 0.09	Sep 08, 2005
-    * Some tests were broken due to the new sort thingy that was added.
+	* Some tests were broken due to the new sort thingy that was added.
 	* Still not sure if this is right... may be I should revert
+	
+0.10	Sep 21, 2005
+	* Added prerequisites to Makefile.PL (to fix broken tests in CPAN)
