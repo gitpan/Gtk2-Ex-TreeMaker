@@ -44,3 +44,6 @@ Revision history for Gtk2-Ex-TreeMaker
 	
 0.10	Sep 21, 2005
 	* Added prerequisites to Makefile.PL (to fix broken tests in CPAN)
+
+0.11	May 19, 2006
+	* Fixed a bug in the locate_record() sub

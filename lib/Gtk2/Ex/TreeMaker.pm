@@ -1,6 +1,6 @@
 package Gtk2::Ex::TreeMaker;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use strict;
 use warnings;
@@ -372,6 +372,7 @@ sub build_model {
 	}
 	# Expand the tree to start with
 	$self->{tree_view_frozen}->expand_all;
+	$self->{tree_view_full}->expand_all;
 }
 
 =head2 Gtk2::Ex::TreeMaker->get_widget
@@ -579,7 +580,7 @@ sub locate_record {
 	my @tree_path = split /:/, $edit_path->to_string; 
 	for (my $i=0; $i<=$#tree_path; $i++) {
 		my $index = $tree_path[$i];
-		$temp = $temp->{'Node'}->[$index];
+		$temp = _get_subtree($temp, $index);
 		push @$record, $temp->{'Name'};
 	}
 	my $column_name = $self->{column_names}->[$column_id]->{'ColumnName'};   
@@ -592,6 +593,19 @@ sub locate_record {
 		}
 	}
 	return $record;
+}
+
+sub _get_subtree {
+	my ($tree, $index) = @_;
+	my $count = 0;
+	foreach my $rec (@{$tree->{'Node'}}) {
+		if (exists $rec->{'Node'}) {
+			if ($count == $index) {
+				return $rec;
+			}	
+			$count++ ;
+		}
+	}
 }
 
 1;
